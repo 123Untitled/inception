@@ -1,0 +1,170 @@
+# docker compose version
+version: '3'
+
+# services to run in the container (nginx, wordpress, mariadb)
+services:
+
+  # nginx service with the following properties
+  nginx:
+
+      # build the image from the Dockerfile in the context directory
+      build:
+
+        # context is the directory where the Dockerfile is located
+        context: ./requirements/nginx
+
+        # dockerfile is the name of the Dockerfile
+        dockerfile: Dockerfile
+
+      # image name
+      image: nginx
+
+      # ports to expose
+      ports:
+          - '443:443'
+
+      # required services to run before this service
+      depends_on:
+          - mariadb
+          - wordpress
+
+      # path to the volume to mount
+      volumes:
+          - wordpress_volume:/var/www/html
+
+      # name of the container
+      container_name: nginx
+
+      # restart policy (always, no, on-failure)
+      restart: always
+
+      # network to connect to
+      networks:
+        - inception_network
+
+  # wordpress service with the following properties
+  wordpress:
+
+      # build the image from the Dockerfile in the context directory
+      build:
+
+        # context is the directory where the Dockerfile is located
+        context: ./requirements/wordpress
+
+        # dockerfile is the name of the Dockerfile
+        dockerfile: Dockerfile
+
+      # image name
+      image: wordpress
+
+      # required services to run before this service
+      depends_on:
+          - mariadb
+
+      # path to the volume to mount
+      volumes:
+          - wordpress_volume:/var/www/html
+
+      # environment variables
+      environment:
+          - MYSQL_DATABASE=${DATABASE_NAME}
+          - MYSQL_USER=${DATABASE_USER}
+          - MYSQL_USER_PASS=${DATABASE_USER_PASS}
+          - MYSQL_HOST=${DATABASE_HOST}
+          - MYSQL_ADMIN_USER=${WORDPRESS_ADMIN_USER}
+          - MYSQL_ADMIN_USER_PASS=${WORDPRESS_ADMIN_USER_PASS}
+
+      # name of the container
+      container_name: wordpress
+
+      # restart policy (always, no, on-failure)
+      restart: always
+
+      # network to connect to
+      networks:
+        - inception_network
+
+  # mariadb service with the following properties
+  mariadb:
+
+    # build the image from the Dockerfile in the context directory
+    build:
+
+      # context is the directory where the Dockerfile is located
+      context: ./requirements/mariadb
+
+      # dockerfile is the name of the Dockerfile
+      dockerfile: Dockerfile
+
+    # image name
+    image: mariadb
+
+    # path to the volume to mount
+    volumes:
+      - mariadb_volume:/var/lib/mysql
+
+    # environment variables
+    environment:
+      - MYSQL_DATABASE=${DATABASE_NAME}
+      - MYSQL_USER=${DATABASE_USER}
+      - MYSQL_USER_PASS=${DATABASE_USER_PASS}
+      - MYSQL_ROOT_PASS=${MYSQL_ROOT_PASS}
+
+    # name of the container
+    container_name: mariadb
+
+    # restart policy (always, no, on-failure)
+    restart: always
+
+    # network to connect to
+    networks:
+      - inception_network
+
+# networks to create
+networks:
+
+  # network name
+  inception_network:
+
+    # driver to use (bridge, overlay, macvlan)
+    # bridge is the default driver and is used for standalone containers
+    driver: bridge
+
+# volumes to create
+volumes:
+
+  # volume name
+  mariadb_volume:
+
+    # driver to use (local, nfs, s3, ...)
+    driver: local
+
+    # driver options
+    driver_opts:
+
+      # type of volume (none, volume, bind, ...)
+      type: none
+
+      # device to mount
+      device: /root/data/database
+
+      # mount options
+      o: bind
+
+  # volume name
+  wordpress_volume:
+
+    # driver to use (local, nfs, s3, ...)
+    driver: local
+
+    # driver options
+    driver_opts:
+
+      # type of volume (none, volume, bind, ...)
+      type: none
+
+      # device to mount
+      device: /root/data/site
+
+      # mount options
+      o: bind
